@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                       String                     @id @default(uuid())
+  email                    String                     @unique
+  name                     String
+  avatarUrl                String?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
+  ChannelMember            ChannelMember[]
+  DirectMessage            DirectMessage[]
+  DirectMessageParticipant DirectMessageParticipant[]
+  Message                  Message[]
+  Workspace                Workspace[]
+  WorkspaceMember          WorkspaceMember[]
+}
+
+model Message {
+  id            String    @id @default(uuid())
+  content       String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
+  isEdited      Boolean   @default(false)
+  authorId      String
+  channelId     String
+  parentId      String?
+  User          User      @relation(fields: [authorId], references: [id])
+  Channel       Channel   @relation(fields: [channelId], references: [id])
+  Message       Message?  @relation("MessageToMessage", fields: [parentId], references: [id])
+  other_Message Message[] @relation("MessageToMessage")
+}
+
+model Channel {
+  id            String          @id
+  name          String
+  description   String?
+  isPrivate     Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime
+  workspaceId   String
+  Workspace     Workspace       @relation(fields: [workspaceId], references: [id])
+  ChannelMember ChannelMember[]
+  Message       Message[]
+
+  @@unique([name, workspaceId])
+}
+
+model ChannelMember {
+  id        String   @id
+  role      Role     @default(MEMBER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  userId    String
+  channelId String
+  Channel   Channel  @relation(fields: [channelId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, channelId])
+}
+
+model DirectMessage {
+  id                        String                    @id
+  content                   String
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime
+  isEdited                  Boolean                   @default(false)
+  authorId                  String
+  conversationId            String
+  User                      User                      @relation(fields: [authorId], references: [id])
+  DirectMessageConversation DirectMessageConversation @relation(fields: [conversationId], references: [id])
+}
+
+model DirectMessageConversation {
+  id                       String                     @id
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime
+  workspaceId              String
+  DirectMessage            DirectMessage[]
+  Workspace                Workspace                  @relation(fields: [workspaceId], references: [id])
+  DirectMessageParticipant DirectMessageParticipant[]
+
+  @@index([workspaceId])
+}
+
+model DirectMessageParticipant {
+  id                        String                    @id
+  conversationId            String
+  userId                    String
+  DirectMessageConversation DirectMessageConversation @relation(fields: [conversationId], references: [id])
+  User                      User                      @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+}
+
+model Workspace {
+  id                        String                      @id
+  name                      String
+  slug                      String                      @unique
+  iconUrl                   String?
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime
+  ownerId                   String
+  Channel                   Channel[]
+  DirectMessageConversation DirectMessageConversation[]
+  User                      User                        @relation(fields: [ownerId], references: [id])
+  WorkspaceMember           WorkspaceMember[]
+}
+
+model WorkspaceMember {
+  id          String    @id
+  role        Role      @default(MEMBER)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  userId      String
+  workspaceId String
+  User        User      @relation(fields: [userId], references: [id])
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([userId, workspaceId])
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}

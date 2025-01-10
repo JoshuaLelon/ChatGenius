@@ -503,7 +503,7 @@ We'll install dependencies in small batches.
 54. [ ] **Deploy with Amplify**  
    - Deploy the backend:
      ```bash
-     npx amplify push
+     npx ampx push
      ```
    - Verify deployment in AWS Console
 
